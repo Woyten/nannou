@@ -68,12 +68,12 @@ impl AdapterMap {
     /// handle to this adapter. Otherwise, requests a new adapter via `Adapter::request`.
     ///
     /// Returns `None` if there are no available adapters that meet the specified options.
-    pub fn get_or_request<'a, 'b>(
+    pub async fn get_or_request<'a, 'b>(
         &'a self,
         options: wgpu::RequestAdapterOptions<'b>,
         instance: &'a wgpu::Instance,
     ) -> Option<Arc<ActiveAdapter>> {
-        futures::executor::block_on(self.get_or_request_async(options, instance))
+        self.get_or_request_async(options, instance).await
     }
 
     /// Request an adaptor with the given options.
@@ -83,12 +83,12 @@ impl AdapterMap {
     /// active adapter exists.
     ///
     /// Returns `None` if there are no available adapters that meet the specified options.
-    pub fn request<'a, 'b>(
+    pub async fn request<'a, 'b>(
         &'a self,
         options: wgpu::RequestAdapterOptions<'b>,
         instance: &'a wgpu::Instance,
     ) -> Option<Arc<ActiveAdapter>> {
-        futures::executor::block_on(self.request_async(options, instance))
+        self.request_async(options, instance).await
     }
 
     /// The async implementation of `get_or_request`.
@@ -170,11 +170,11 @@ impl ActiveAdapter {
     ///
     /// First checks for a connected device that matches the given descriptor. If one exists, it is
     /// returned. Otherwise, a new device connection is requested via `Adapter::request_device`.
-    pub fn get_or_request_device(
+    pub async fn get_or_request_device(
         &self,
         descriptor: wgpu::DeviceDescriptor,
     ) -> Arc<DeviceQueuePair> {
-        futures::executor::block_on(self.get_or_request_device_async(descriptor))
+        self.get_or_request_device_async(descriptor).await
     }
 
     /// Request a device with the given descriptor.
@@ -182,8 +182,8 @@ impl ActiveAdapter {
     /// This will always request a new device connection and will never attempt to share an
     /// existing one. The new device will take the place of the old within the map in the case that
     /// an existing connected device exists.
-    pub fn request_device(&self, descriptor: wgpu::DeviceDescriptor) -> Arc<DeviceQueuePair> {
-        futures::executor::block_on(self.request_device_async(descriptor))
+    pub async fn request_device(&self, descriptor: wgpu::DeviceDescriptor) -> Arc<DeviceQueuePair> {
+        self.request_device_async(descriptor).await
     }
 
     /// Check for a device with the given descriptor or request one.

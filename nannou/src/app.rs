@@ -19,18 +19,19 @@ use crate::wgpu;
 use crate::window::{self, Window};
 use find_folder;
 use instant::Instant;
-use std;
 use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::PathBuf;
 use std::sync::atomic::{self, AtomicBool};
 use std::sync::Arc;
 use std::time::Duration;
+use std::{self, pin::Pin};
 use winit;
 use winit::event_loop::ControlFlow;
 
 /// The user function type for initialising their model.
-pub type ModelFn<Model> = fn(&App) -> Model;
+pub type ModelFn<Model> = fn(&App) -> Box<dyn Future<Output = Model>>;
 
 /// The user function type for updating their model in accordance with some event.
 pub type EventFn<Model, Event> = fn(&App, &mut Model, Event);
@@ -79,11 +80,6 @@ enum DefaultWindowSize {
     Logical(winit::dpi::LogicalSize<u32>),
     /// Fullscreen on whatever the primary monitor is at the time of window creation.
     Fullscreen,
-}
-
-/// The default `model` function used when none is specified by the user.
-fn default_model(_: &App) -> () {
-    ()
 }
 
 /// Each nannou application has a single **App** instance. This **App** represents the entire
@@ -441,7 +437,7 @@ where
     /// If you wish to remain cross-platform frienly, we recommend that you call this on the main
     /// thread as some platforms require that their application event loop and windows are
     /// initialised on the main thread.
-    pub fn run(self) {
+    pub async fn run(self) {
         // Start the winit window event loop.
         let event_loop = winit::event_loop::EventLoop::new();
 
@@ -475,12 +471,13 @@ where
             let window_id = app
                 .new_window()
                 .build()
+                .await
                 .expect("could not build default app window");
             *app.focused_window.borrow_mut() = Some(window_id);
         }
 
         // Call the user's model function.
-        let model = (self.model)(&app);
+        let model = unsafe { Pin::new_unchecked((self.model)(&app)) }.await;
 
         // If there is not yet some default window in "focus" check to see if one has been created.
         if app.focused_window.borrow().is_none() {
@@ -513,8 +510,8 @@ where
     /// Build and run a `Sketch` with the specified parameters.
     ///
     /// This calls `App::run` internally. See that method for details!
-    pub fn run(self) {
-        self.builder.run()
+    pub async fn run(self) {
+        self.builder.run().await
     }
 }
 
@@ -525,7 +522,7 @@ impl Builder<(), Event> {
     /// This is useful for late night hack sessions where you just don't care about all that other
     /// stuff, you just want to play around with some ideas or make something pretty.
     pub fn sketch(view: SketchViewFn) -> SketchBuilder<Event> {
-        let mut builder = Builder::new(default_model);
+        let mut builder = Builder::new(|_| Box::new(async {}));
         builder.default_view = Some(View::Sketch(view));
         builder.create_default_window = true;
         SketchBuilder { builder }

@@ -682,7 +682,7 @@ impl<'app> Builder<'app> {
     }
 
     /// Builds the window, inserts it into the `App`'s display map and returns the unique ID.
-    pub fn build(self) -> Result<Id, BuildError> {
+    pub async fn build(self) -> Result<Id, BuildError> {
         let Builder {
             app,
             mut window,
@@ -793,11 +793,12 @@ impl<'app> Builder<'app> {
         let adapter = app
             .wgpu_adapters()
             .get_or_request(request_adapter_opts, app.instance())
+            .await
             .ok_or(BuildError::NoAvailableAdapter)?;
 
         // Instantiate the logical device.
         let device_desc = device_desc.unwrap_or_else(wgpu::default_device_descriptor);
-        let device_queue_pair = adapter.get_or_request_device(device_desc);
+        let device_queue_pair = adapter.get_or_request_device(device_desc).await;
 
         // Build the swapchain.
         let win_physical_size = window.inner_size();

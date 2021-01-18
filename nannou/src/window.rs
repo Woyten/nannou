@@ -331,6 +331,8 @@ impl SwapChainBuilder {
             height: height_px,
             present_mode,
         };
+        let mut desc = desc.clone();
+        desc.format = wgpu::TextureFormat::Bgra8Unorm; // Firefox support
         let swap_chain = device.create_swap_chain(surface, &desc);
         (swap_chain, desc)
     }
